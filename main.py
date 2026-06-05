@@ -1,5 +1,7 @@
 import os, json, math, random, asyncio, threading, logging
 
+os.environ.setdefault('KIVY_WINDOW', 'x11')
+
 from kivy.config import Config
 Config.set('input', 'mouse', 'mouse,disable_multitouch')
 Config.set('graphics', 'show_cursor', '1')
@@ -646,11 +648,13 @@ class DianaApp(App):
 
         if dtype == 'light':
             row = BoxLayout(size_hint_y=None, height=dp(32), spacing=dp(6))
-            row.add_widget(btn('ON',  'green',  lambda x: self._light_cmd('on')))
-            row.add_widget(btn('OFF', 'red',    lambda x: self._light_cmd('off')))
-            row.add_widget(btn('DIM', 'yellow_dim', lambda x: self._light_cmd('dim')))
-            row.add_widget(btn('BRIGHT', 'yellow',  lambda x: self._light_cmd('bright')))
+            row.add_widget(btn('ON',     'green',      lambda x: self._light_cmd('on')))
+            row.add_widget(btn('OFF',    'red',        lambda x: self._light_cmd('off')))
+            row.add_widget(btn('DIM',    'yellow_dim', lambda x: self._light_cmd('dim')))
+            row.add_widget(btn('BRIGHT', 'yellow',     lambda x: self._light_cmd('bright')))
             self.ctrl_box.add_widget(row)
+            self.ctrl_box.add_widget(
+                btn('DISCOVER SERVICES', 'cyan_dim', lambda x: self._discover_services(addr)))
             self.ctrl_box.add_widget(lbl('Connect first to send commands', 'white_dim', size=8))
 
         elif dtype == 'speaker':
@@ -758,6 +762,42 @@ class DianaApp(App):
             if item.address == addr:
                 item.set_connected(connected)
                 break
+
+    # ── Service discovery ──────────────────────────────────────
+    def _discover_services(self, addr: str):
+        client = self.connections.get(addr)
+        if not client:
+            self._set_status('Not connected — connect first', 'ERROR')
+            return
+        self._run_ble(self._print_services(client))
+
+    async def _print_services(self, client: BleakClient):
+        lines = []
+        for svc in client.services:
+            lines.append(f'SVC: {svc.uuid}')
+            for char in svc.characteristics:
+                props = ','.join(char.properties)
+                lines.append(f'  CHAR: {char.uuid}  [{props}]')
+        output = '\n'.join(lines) if lines else 'No services found'
+        log.info('=== GATT Services ===\n%s', output)
+        Clock.schedule_once(lambda dt: self._show_services_popup(output))
+
+    def _show_services_popup(self, text: str):
+        wrap = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(12))
+        wrap.add_widget(lbl('Copy these UUIDs to identify your device protocol.',
+                            'cyan_dim', size=9))
+        scroll = ScrollView()
+        content = Label(
+            text=text, font_size=dp(8), color=C['white'],
+            size_hint_y=None, halign='left', valign='top',
+            text_size=(dp(500), None),
+        )
+        content.bind(texture_size=lambda i, v: setattr(i, 'height', v[1]))
+        scroll.add_widget(content)
+        wrap.add_widget(scroll)
+        p = self._popup('DISCOVERED SERVICES', wrap, size=(0.7, 0.7))
+        wrap.add_widget(btn('CLOSE', 'red', lambda x: p.dismiss()))
+        p.open()
 
     # ── Light commands ─────────────────────────────────────────
     def _light_cmd(self, cmd: str):
