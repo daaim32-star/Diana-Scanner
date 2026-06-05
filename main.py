@@ -14,7 +14,8 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.popup import Popup
 from kivy.uix.spinner import Spinner
 from kivy.uix.widget import Widget
-from kivy.graphics import Color, Ellipse, Line, Rectangle
+from kivy.uix.progressbar import ProgressBar
+from kivy.graphics import Color, Ellipse, Line, Rectangle, RoundedRectangle
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.metrics import dp
@@ -23,25 +24,29 @@ from bleak import BleakScanner, BleakClient, BleakError
 logging.basicConfig(level=logging.INFO, format='[DIANA] %(levelname)s: %(message)s')
 log = logging.getLogger(__name__)
 
-Window.clearcolor = (0.008, 0.047, 0.063, 1)
+Window.clearcolor = (0.006, 0.035, 0.047, 1)
+
+VERSION = 'v0.3'
 
 # ── Colour palette ─────────────────────────────────────────────────────────────
 C = {
-    'cyan':       (0.00, 0.96, 1.00, 1.0),
-    'cyan_dim':   (0.00, 0.96, 1.00, 0.35),
-    'cyan_bg':    (0.00, 0.96, 1.00, 0.06),
-    'green':      (0.20, 1.00, 0.40, 1.0),
-    'green_dim':  (0.20, 1.00, 0.40, 0.35),
-    'green_bg':   (0.20, 1.00, 0.40, 0.06),
-    'red':        (1.00, 0.24, 0.36, 1.0),
-    'red_dim':    (1.00, 0.24, 0.36, 0.35),
-    'red_bg':     (1.00, 0.24, 0.36, 0.06),
-    'yellow':     (1.00, 0.85, 0.00, 1.0),
-    'yellow_dim': (1.00, 0.85, 0.00, 0.35),
-    'yellow_bg':  (1.00, 0.85, 0.00, 0.06),
-    'white':      (0.88, 0.97, 1.00, 1.0),
-    'white_dim':  (0.88, 0.97, 1.00, 0.35),
-    'white_bg':   (0.88, 0.97, 1.00, 0.05),
+    'cyan':       (0.00, 0.90, 0.95, 1.0),
+    'cyan_dim':   (0.00, 0.90, 0.95, 0.40),
+    'cyan_bg':    (0.00, 0.90, 0.95, 0.07),
+    'green':      (0.18, 0.95, 0.45, 1.0),
+    'green_dim':  (0.18, 0.95, 0.45, 0.40),
+    'green_bg':   (0.18, 0.95, 0.45, 0.07),
+    'red':        (1.00, 0.22, 0.35, 1.0),
+    'red_dim':    (1.00, 0.22, 0.35, 0.40),
+    'red_bg':     (1.00, 0.22, 0.35, 0.07),
+    'yellow':     (1.00, 0.82, 0.00, 1.0),
+    'yellow_dim': (1.00, 0.82, 0.00, 0.40),
+    'yellow_bg':  (1.00, 0.82, 0.00, 0.07),
+    'white':      (0.88, 0.96, 1.00, 1.0),
+    'white_dim':  (0.88, 0.96, 1.00, 0.35),
+    'white_bg':   (0.88, 0.96, 1.00, 0.04),
+    'bg':         (0.006, 0.035, 0.047, 1.0),
+    'panel':      (0.012, 0.055, 0.072, 1.0),
 }
 
 REGISTRY_PATH = os.path.expanduser('~/diana/registry.json')
@@ -80,17 +85,19 @@ def save_registry(reg: dict) -> bool:
         return False
 
 # ── Widget helpers ─────────────────────────────────────────────────────────────
-def panel(border_color_key: str) -> BoxLayout:
+def panel(border_color_key: str, radius=6) -> BoxLayout:
     bk = C[border_color_key]
-    layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(6))
+    layout = BoxLayout(orientation='vertical', padding=dp(12), spacing=dp(8))
     with layout.canvas.before:
-        Color(*bk[:3], 0.07)
-        layout._bg = Rectangle(pos=layout.pos, size=layout.size)
-        Color(*bk[:3], 0.22)
-        layout._bd = Line(rectangle=(layout.x, layout.y, layout.width, layout.height), width=1)
+        Color(*C['panel'])
+        layout._bg = RoundedRectangle(pos=layout.pos, size=layout.size, radius=[dp(radius)])
+        Color(*bk[:3], 0.30)
+        layout._bd = Line(rounded_rectangle=(layout.x, layout.y, layout.width, layout.height,
+                                             dp(radius)), width=1)
     def _upd(inst, _):
         inst._bg.pos  = inst.pos;  inst._bg.size = inst.size
-        inst._bd.rectangle = (inst.x, inst.y, inst.width, inst.height)
+        inst._bg.radius = [dp(radius)]
+        inst._bd.rounded_rectangle = (inst.x, inst.y, inst.width, inst.height, dp(radius))
     layout.bind(pos=_upd, size=_upd)
     return layout
 
@@ -102,16 +109,32 @@ def lbl(text: str, color_key: str, size=11, bold=False,
     l.bind(size=lambda inst, v: setattr(inst, 'text_size', v))
     return l
 
-def btn(text: str, color_key: str, cb=None, height=dp(34)) -> Button:
+def section_title(text: str, color_key: str) -> BoxLayout:
+    row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(22), spacing=dp(8))
+    ck = C[color_key]
+    tick = Widget(size_hint_x=None, width=dp(3))
+    with tick.canvas:
+        Color(*ck[:3], 0.9)
+        tick._rect = Rectangle(pos=tick.pos, size=tick.size)
+    tick.bind(pos=lambda i, _: setattr(i._rect, 'pos', i.pos),
+              size=lambda i, _: setattr(i._rect, 'size', i.size))
+    row.add_widget(tick)
+    row.add_widget(lbl(text, color_key, size=10, bold=True, height=dp(22)))
+    return row
+
+def btn(text: str, color_key: str, cb=None, height=dp(32), radius=5) -> Button:
     ck = C[color_key]
     b = Button(text=text, size_hint_y=None, height=height,
-               background_color=(0, 0, 0, 0), color=ck, font_size=dp(11))
+               background_color=(0, 0, 0, 0), color=ck, font_size=dp(10), bold=True)
     with b.canvas.before:
-        Color(*ck[:3], 0.10); b._bg = Rectangle(pos=b.pos, size=b.size)
-        Color(*ck[:3], 0.35); b._bd = Line(rectangle=(b.x, b.y, b.width, b.height), width=0.8)
+        Color(*ck[:3], 0.10)
+        b._bg = RoundedRectangle(pos=b.pos, size=b.size, radius=[dp(radius)])
+        Color(*ck[:3], 0.40)
+        b._bd = Line(rounded_rectangle=(b.x, b.y, b.width, b.height, dp(radius)), width=0.9)
     def _upd(inst, _):
         inst._bg.pos = inst.pos; inst._bg.size = inst.size
-        inst._bd.rectangle = (inst.x, inst.y, inst.width, inst.height)
+        inst._bg.radius = [dp(radius)]
+        inst._bd.rounded_rectangle = (inst.x, inst.y, inst.width, inst.height, dp(radius))
     b.bind(pos=_upd, size=_upd)
     if cb:
         b.bind(on_press=cb)
@@ -120,7 +143,7 @@ def btn(text: str, color_key: str, cb=None, height=dp(34)) -> Button:
 def divider(color_key: str) -> Widget:
     w = Widget(size_hint_y=None, height=dp(1))
     with w.canvas:
-        Color(*C[color_key][:3], 0.18)
+        Color(*C[color_key][:3], 0.12)
         w._line = Rectangle(pos=w.pos, size=w.size)
     w.bind(pos=lambda inst, _: setattr(inst._line, 'pos', inst.pos),
            size=lambda inst, _: setattr(inst._line, 'size', inst.size))
@@ -164,7 +187,7 @@ class RadarWidget(Widget):
     def add_blip(self, rssi: int, color_key='cyan'):
         cx, cy = self.center
         r = min(self.width, self.height) * 0.42
-        d = max(0.05, min(0.95, (rssi + 20) / 70.0)) * r
+        d = max(0.08, min(0.92, (rssi + 20) / 70.0)) * r
         a = random.uniform(0, 2 * math.pi)
         self.blips.append({
             'x': cx + d * math.cos(a), 'y': cy + d * math.sin(a),
@@ -174,7 +197,7 @@ class RadarWidget(Widget):
     def _tick(self, dt):
         self.angle = (self.angle + 2) % 360
         for b in self.blips:
-            b['alpha'] = max(0.3, b['alpha'] - 0.0008)
+            b['alpha'] = max(0.28, b['alpha'] - 0.0006)
         self._draw()
 
     def _draw(self, *_):
@@ -182,36 +205,41 @@ class RadarWidget(Widget):
         cx, cy = self.center
         r = min(self.width, self.height) * 0.42
         with self.canvas:
+            # Rings
             for i in range(1, 5):
-                Color(0, 0.96, 1, 0.07)
+                Color(0, 0.90, 0.95, 0.06)
                 Line(circle=(cx, cy, r * i / 4), width=1)
-            Color(0, 0.96, 1, 0.05)
+            # Cross hairs
+            Color(0, 0.90, 0.95, 0.04)
             Line(points=[cx - r, cy, cx + r, cy], width=1)
             Line(points=[cx, cy - r, cx, cy + r], width=1)
+            # Sweep
             if self.scanning:
-                for i in range(72):
-                    t = math.radians(self.angle - i * 0.9)
-                    a = (72 - i) / 72 * 0.28
-                    Color(0, 0.96, 1, a)
+                for i in range(80):
+                    t = math.radians(self.angle - i * 0.85)
+                    a = (80 - i) / 80 * 0.22
+                    Color(0, 0.90, 0.95, a)
                     Line(points=[cx, cy, cx + r * math.cos(t), cy + r * math.sin(t)], width=1.2)
-                Color(0, 0.96, 1, 0.95)
+                Color(0, 0.90, 0.95, 0.90)
                 s = math.radians(self.angle)
-                Line(points=[cx, cy, cx + r * math.cos(s), cy + r * math.sin(s)], width=1.8)
+                Line(points=[cx, cy, cx + r * math.cos(s), cy + r * math.sin(s)], width=1.6)
+            # Blips
             for b in self.blips:
                 ck = C.get(b['color'], C['cyan'])
                 Color(*ck[:3], b['alpha'])
-                Ellipse(pos=(b['x'] - dp(5), b['y'] - dp(5)), size=(dp(10), dp(10)))
-                Color(*ck[:3], b['alpha'] * 0.2)
-                Ellipse(pos=(b['x'] - dp(11), b['y'] - dp(11)), size=(dp(22), dp(22)))
-            Color(0, 0.96, 1, 1)
-            Ellipse(pos=(cx - dp(4), cy - dp(4)), size=(dp(8), dp(8)))
+                Ellipse(pos=(b['x'] - dp(4), b['y'] - dp(4)), size=(dp(8), dp(8)))
+                Color(*ck[:3], b['alpha'] * 0.15)
+                Ellipse(pos=(b['x'] - dp(10), b['y'] - dp(10)), size=(dp(20), dp(20)))
+            # Centre dot
+            Color(0, 0.90, 0.95, 1)
+            Ellipse(pos=(cx - dp(3), cy - dp(3)), size=(dp(6), dp(6)))
 
 # ── Device list item ───────────────────────────────────────────────────────────
 class DeviceItem(BoxLayout):
     def __init__(self, display_name: str, address: str, rssi: int,
                  dtype: str, on_select, **kwargs):
         super().__init__(orientation='vertical', size_hint_y=None,
-                         height=dp(60), padding=(dp(10), dp(6)), spacing=dp(2), **kwargs)
+                         height=dp(56), padding=(dp(10), dp(5)), spacing=dp(2), **kwargs)
         self.address      = address
         self.rssi         = rssi
         self.dtype        = dtype
@@ -224,9 +252,9 @@ class DeviceItem(BoxLayout):
 
         icon = TYPE_ICON.get(dtype, '')
         self._name_lbl = Label(
-            text=f'{icon} {display_name}'.strip(),
-            font_size=dp(12), color=C['white'],
-            size_hint_y=None, height=dp(22),
+            text=f'{icon} {display_name}'.strip() if icon else display_name,
+            font_size=dp(11), color=C['white'], bold=True,
+            size_hint_y=None, height=dp(20),
             halign='left', valign='middle',
         )
         self._name_lbl.bind(size=lambda inst, v: setattr(inst, 'text_size', v))
@@ -234,8 +262,8 @@ class DeviceItem(BoxLayout):
 
         self._sub_lbl = Label(
             text=f'{address}   {signal_bars(rssi)}  {rssi} dBm',
-            font_size=dp(9), color=C['cyan_dim'],
-            size_hint_y=None, height=dp(16),
+            font_size=dp(8.5), color=C['cyan_dim'],
+            size_hint_y=None, height=dp(15),
             halign='left', valign='middle',
         )
         self._sub_lbl.bind(size=lambda inst, v: setattr(inst, 'text_size', v))
@@ -246,7 +274,7 @@ class DeviceItem(BoxLayout):
     def update_name(self, name: str):
         self.display_name = name
         icon = TYPE_ICON.get(self.dtype, '')
-        self._name_lbl.text = f'{icon} {name}'.strip()
+        self._name_lbl.text = f'{icon} {name}'.strip() if icon else name
 
     def _update_sub(self):
         conn = '  ● CONNECTED' if self.connected else ''
@@ -264,23 +292,24 @@ class DeviceItem(BoxLayout):
         with self.canvas.before:
             if self.connected:
                 Color(*C['green_bg'])
-                self._bg = Rectangle(pos=self.pos, size=self.size)
-                Color(*C['green'][:3], 0.40)
-                self._bd = Line(rectangle=(self.x, self.y, self.width, self.height), width=1.2)
+                self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(5)])
+                Color(*C['green'][:3], 0.45)
+                self._bd = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(5)), width=1)
             elif selected:
                 Color(*C['cyan_bg'])
-                self._bg = Rectangle(pos=self.pos, size=self.size)
-                Color(*C['cyan'][:3], 0.45)
-                self._bd = Line(rectangle=(self.x, self.y, self.width, self.height), width=1.2)
+                self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(5)])
+                Color(*C['cyan'][:3], 0.50)
+                self._bd = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(5)), width=1)
             else:
                 Color(*C['white_bg'])
-                self._bg = Rectangle(pos=self.pos, size=self.size)
-                Color(*C['white'][:3], 0.10)
-                self._bd = Line(rectangle=(self.x, self.y, self.width, self.height), width=0.7)
+                self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(5)])
+                Color(*C['white'][:3], 0.08)
+                self._bd = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(5)), width=0.7)
 
     def _refresh_bg(self, *_):
         self._bg.pos = self.pos; self._bg.size = self.size
-        self._bd.rectangle = (self.x, self.y, self.width, self.height)
+        self._bg.radius = [dp(5)]
+        self._bd.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(5))
 
     def _on_touch(self, inst, touch):
         if touch.button == 'left' and self.collide_point(*touch.pos):
@@ -296,87 +325,151 @@ class DianaApp(App):
     def build(self):
         self.registry     = load_registry()
         self.live_devices = {}
-        self.connections  = {}   # address -> BleakClient
+        self.connections  = {}
         self.selected     = None
         self.sel_item     = None
         self._ble_loop    = None
         self._ble_thread  = None
+        self._scan_start  = 0
         self._start_ble_thread()
 
-        root = BoxLayout(orientation='vertical', spacing=dp(6), padding=dp(8))
+        root = BoxLayout(orientation='vertical', spacing=0, padding=0)
 
-        # Header
-        hdr = BoxLayout(size_hint_y=None, height=dp(30))
+        # ── Header bar ─────────────────────────────────────────
+        hdr = BoxLayout(size_hint_y=None, height=dp(44),
+                        padding=(dp(16), 0), spacing=dp(12))
+        with hdr.canvas.before:
+            Color(0.010, 0.048, 0.062, 1)
+            hdr._bg = Rectangle(pos=hdr.pos, size=hdr.size)
+            Color(*C['cyan'][:3], 0.12)
+            hdr._bd = Rectangle(pos=(hdr.x, hdr.y), size=(hdr.width, dp(1)))
+        def _hdr_upd(inst, _):
+            inst._bg.pos = inst.pos; inst._bg.size = inst.size
+            inst._bd.pos = (inst.x, inst.y); inst._bd.size = (inst.width, dp(1))
+        hdr.bind(pos=_hdr_upd, size=_hdr_upd)
+
         hdr.add_widget(Label(
-            text='D I A N A  //  DEVICE INTERFACE',
-            font_size=dp(13), color=C['cyan'],
-            halign='left', text_size=(dp(600), None),
+            text='DIANA', font_size=dp(16), color=C['cyan'], bold=True,
+            size_hint_x=None, width=dp(70), halign='left',
+            text_size=(dp(70), None),
+        ))
+        hdr.add_widget(Label(
+            text='Device Interface & Network Analyser',
+            font_size=dp(9), color=C['white_dim'],
+            halign='left', text_size=(dp(300), None),
         ))
         self.status_lbl = Label(
-            text='READY — TAP SCAN TO BEGIN',
-            font_size=dp(10), color=C['cyan_dim'],
-            halign='right', text_size=(dp(400), None),
+            text='READY',
+            font_size=dp(9), color=C['cyan_dim'],
+            halign='right', text_size=(dp(300), None),
         )
         hdr.add_widget(self.status_lbl)
+        hdr.add_widget(Label(
+            text=VERSION, font_size=dp(8), color=C['white_dim'],
+            size_hint_x=None, width=dp(30),
+            halign='right', text_size=(dp(30), None),
+        ))
         root.add_widget(hdr)
 
-        body = BoxLayout(orientation='horizontal', spacing=dp(8))
+        # ── Body ───────────────────────────────────────────────
+        body = BoxLayout(orientation='horizontal', spacing=dp(8),
+                         padding=(dp(8), dp(8), dp(8), dp(0)))
 
-        # ── LEFT: device list ──────────────────────────────────
+        # LEFT: device list
         left = panel('white')
-        left.size_hint_x = 0.24
-        left.add_widget(lbl('DISCOVERED DEVICES', 'white', size=10, bold=True))
-        self.count_lbl = lbl('0 devices', 'white_dim', size=9)
+        left.size_hint_x = 0.23
+        left.add_widget(section_title('DISCOVERED DEVICES', 'white'))
+        self.count_lbl = lbl('No devices yet', 'white_dim', size=9)
         left.add_widget(self.count_lbl)
+        left.add_widget(divider('white'))
 
-        scroll = ScrollView(bar_width=dp(3), bar_color=C['cyan_dim'],
-                            bar_inactive_color=C['cyan_bg'])
-        self.dev_list = GridLayout(cols=1, spacing=dp(4), size_hint_y=None,
+        scroll = ScrollView(bar_width=dp(2), bar_color=C['cyan_dim'],
+                            bar_inactive_color=C['white_bg'])
+        self.dev_list = GridLayout(cols=1, spacing=dp(3), size_hint_y=None,
                                    padding=(0, dp(2)))
         self.dev_list.bind(minimum_height=self.dev_list.setter('height'))
         scroll.add_widget(self.dev_list)
         left.add_widget(scroll)
         body.add_widget(left)
 
-        # ── MIDDLE ─────────────────────────────────────────────
-        mid = BoxLayout(orientation='vertical', spacing=dp(8), size_hint_x=0.52)
+        # MIDDLE
+        mid = BoxLayout(orientation='vertical', spacing=dp(8), size_hint_x=0.54)
 
-        top = panel('green')
-        top.size_hint_y = 0.62
-        top.add_widget(lbl('SIGNAL RADAR', 'green', size=10, bold=True))
+        # Radar panel
+        radar_panel = panel('green')
+        radar_panel.size_hint_y = 0.63
+        radar_panel.add_widget(section_title('SIGNAL RADAR', 'green'))
         self.radar = RadarWidget(size_hint_y=1)
-        top.add_widget(self.radar)
-        self.scan_btn = btn('INITIATE SCAN', 'green', self._start_scan)
-        top.add_widget(self.scan_btn)
-        mid.add_widget(top)
+        radar_panel.add_widget(self.radar)
 
-        bot = panel('yellow')
-        bot.size_hint_y = 0.38
-        bot.add_widget(lbl('DEVICE CONTROLS', 'yellow', size=10, bold=True))
-        bot.add_widget(divider('yellow'))
+        # Scan button + progress row
+        scan_row = BoxLayout(size_hint_y=None, height=dp(32), spacing=dp(8))
+        self.scan_btn = btn('INITIATE SCAN', 'green', self._start_scan)
+        scan_row.add_widget(self.scan_btn)
+        radar_panel.add_widget(scan_row)
+
+        self.progress = ProgressBar(max=100, value=0,
+                                    size_hint_y=None, height=dp(3))
+        with self.progress.canvas.before:
+            Color(*C['green'][:3], 0.15)
+            self.progress._bg = Rectangle(pos=self.progress.pos, size=self.progress.size)
+        def _pb_upd(inst, _):
+            inst._bg.pos = inst.pos; inst._bg.size = inst.size
+        self.progress.bind(pos=_pb_upd, size=_pb_upd)
+        radar_panel.add_widget(self.progress)
+        mid.add_widget(radar_panel)
+
+        # Controls panel
+        ctrl_panel = panel('yellow')
+        ctrl_panel.size_hint_y = 0.37
+        ctrl_panel.add_widget(section_title('DEVICE CONTROLS', 'yellow'))
+        ctrl_panel.add_widget(divider('yellow'))
         self.ctrl_box = BoxLayout(orientation='vertical', spacing=dp(5))
         self.ctrl_box.add_widget(
-            lbl('— select a device to see controls —', 'yellow_dim', size=10))
-        bot.add_widget(self.ctrl_box)
-        mid.add_widget(bot)
-
+            lbl('Select a device to see controls', 'white_dim', size=9))
+        ctrl_panel.add_widget(self.ctrl_box)
+        mid.add_widget(ctrl_panel)
         body.add_widget(mid)
 
-        # ── RIGHT: options ──────────────────────────────────────
-        right = panel('red')
-        right.size_hint_x = 0.24
-        right.add_widget(lbl('DEVICE OPTIONS', 'red', size=10, bold=True))
-        right.add_widget(divider('red'))
+        # RIGHT: options
+        right = panel('cyan')
+        right.size_hint_x = 0.23
+        right.add_widget(section_title('DEVICE OPTIONS', 'cyan'))
+        right.add_widget(divider('cyan'))
         self.opts_box = BoxLayout(orientation='vertical', spacing=dp(5))
-        self.opts_box.add_widget(lbl('— select a device —', 'red_dim', size=10))
+        self.opts_box.add_widget(lbl('Select a device', 'white_dim', size=9))
         right.add_widget(self.opts_box)
         body.add_widget(right)
 
         root.add_widget(body)
 
-        Window.show_cursor = True
+        # ── Status bar ─────────────────────────────────────────
+        bar = BoxLayout(size_hint_y=None, height=dp(22),
+                        padding=(dp(12), 0), spacing=dp(16))
+        with bar.canvas.before:
+            Color(0.008, 0.040, 0.052, 1)
+            bar._bg = Rectangle(pos=bar.pos, size=bar.size)
+            Color(*C['cyan'][:3], 0.08)
+            bar._top = Rectangle(pos=(bar.x, bar.top - dp(1)), size=(bar.width, dp(1)))
+        def _bar_upd(inst, _):
+            inst._bg.pos = inst.pos; inst._bg.size = inst.size
+            inst._top.pos = (inst.x, inst.top - dp(1)); inst._top.size = (inst.width, dp(1))
+        bar.bind(pos=_bar_upd, size=_bar_upd)
+
+        self.bar_lbl = Label(text='● IDLE', font_size=dp(8), color=C['cyan_dim'],
+                             halign='left', text_size=(dp(400), None))
+        bar.add_widget(self.bar_lbl)
+        bar.add_widget(Label(text=f'DIANA {VERSION}  //  Bluetooth LE Scanner',
+                             font_size=dp(8), color=C['white_dim'],
+                             halign='right', text_size=(dp(400), None)))
+        root.add_widget(bar)
+
         Clock.schedule_once(self._load_saved_into_list, 0.3)
         return root
+
+    def on_start(self):
+        Window.show_cursor = True
+        Clock.schedule_once(lambda dt: setattr(Window, 'show_cursor', True), 0.5)
 
     def on_stop(self):
         for client in list(self.connections.values()):
@@ -410,19 +503,27 @@ class DianaApp(App):
             self.radar.add_blip(rssi, 'green')
         n = len(self.registry)
         if n:
-            self.count_lbl.text  = f'{plural(n, "saved device")} loaded'
-            self.status_lbl.text = f'{n} SAVED — TAP SCAN FOR FULL SWEEP'
+            self.count_lbl.text = f'{plural(n, "saved device")} loaded'
+            self._set_status(f'{n} saved — tap scan for full sweep', 'IDLE')
 
     # ── Scan ───────────────────────────────────────────────────
     def _start_scan(self, *_):
-        self.status_lbl.text   = 'SCANNING...'
         self.scan_btn.text     = 'SCANNING...'
         self.scan_btn.disabled = True
         self.dev_list.clear_widgets()
         self.live_devices      = {}
         self.radar.clear_blips()
         self.radar.start()
+        self.progress.value    = 0
+        self._scan_start       = 0
+        self._set_status('Scanning for Bluetooth LE devices…', 'SCANNING')
+        self.count_lbl.text    = 'Scanning...'
+        self._progress_clock   = Clock.schedule_interval(self._tick_progress, 0.1)
         self._run_ble(self._do_scan())
+
+    def _tick_progress(self, dt):
+        self._scan_start += dt
+        self.progress.value = min(100, (self._scan_start / SCAN_TIMEOUT) * 100)
 
     async def _do_scan(self):
         try:
@@ -437,18 +538,22 @@ class DianaApp(App):
         except BleakError as e:
             err = str(e)
             log.error('Scan failed: %s', err)
-            Clock.schedule_once(lambda dt: self._set_status(f'SCAN ERROR: {err}'))
+            Clock.schedule_once(lambda dt: self._set_status(f'Scan error: {err}', 'ERROR'))
         finally:
             Clock.schedule_once(lambda dt: self._scan_done())
 
     def _scan_done(self):
+        if hasattr(self, '_progress_clock'):
+            self._progress_clock.cancel()
+        self.progress.value    = 100
         self.radar.stop()
         self.scan_btn.text     = 'RESCAN'
         self.scan_btn.disabled = False
         n = len(self.live_devices)
-        self.status_lbl.text   = f'{plural(n, "device")} found'
-        self.count_lbl.text    = f'{plural(n, "device")}  ·  sorted by signal strength'
+        self.count_lbl.text    = f'{plural(n, "device")}  ·  sorted by signal'
+        self._set_status(f'Scan complete — {plural(n, "device")} found', 'IDLE')
         self._sort_list()
+        Clock.schedule_once(lambda dt: setattr(self.progress, 'value', 0), 1.5)
 
     def _add_device(self, name: str, address: str, rssi: int):
         saved   = self.registry.get(address, {})
@@ -488,7 +593,7 @@ class DianaApp(App):
         self.opts_box.clear_widgets()
         d = self.selected
         if not d:
-            self.opts_box.add_widget(lbl('— select a device —', 'red_dim', size=10))
+            self.opts_box.add_widget(lbl('Select a device', 'white_dim', size=9))
             return
 
         addr     = d['address']
@@ -498,24 +603,30 @@ class DianaApp(App):
         is_saved = addr in self.registry
         is_conn  = addr in self.connections
 
-        self.opts_box.add_widget(lbl(name, 'white', size=13, bold=True, height=dp(24)))
-        self.opts_box.add_widget(lbl(addr, 'white_dim', size=9))
+        self.opts_box.add_widget(lbl(name, 'white', size=12, bold=True, height=dp(22)))
+        self.opts_box.add_widget(lbl(addr, 'white_dim', size=8))
         self.opts_box.add_widget(lbl(
-            f"TYPE: {dtype.upper()}   RSSI: {d['rssi']} dBm", 'red_dim', size=9))
-        self.opts_box.add_widget(divider('red'))
+            f"{dtype.upper()}   {signal_bars(d['rssi'])}  {d['rssi']} dBm",
+            'cyan_dim', size=8, height=dp(16)))
+        self.opts_box.add_widget(divider('cyan'))
 
         if is_conn:
-            self.opts_box.add_widget(lbl('● CONNECTED', 'green', size=9, bold=True))
+            conn_row = BoxLayout(size_hint_y=None, height=dp(18), spacing=dp(6))
+            dot = Label(text='●', font_size=dp(9), color=C['green'],
+                        size_hint_x=None, width=dp(14))
+            conn_row.add_widget(dot)
+            conn_row.add_widget(lbl('CONNECTED', 'green', size=9, bold=True, height=dp(18)))
+            self.opts_box.add_widget(conn_row)
             self.opts_box.add_widget(btn('DISCONNECT', 'red', self._do_disconnect))
         else:
             self.opts_box.add_widget(btn('CONNECT', 'green', self._do_connect))
 
-        self.opts_box.add_widget(divider('red'))
-        save_label = 'UPDATE DEVICE INFO' if is_saved else 'SAVE DEVICE'
+        self.opts_box.add_widget(divider('cyan'))
+        save_label = 'UPDATE INFO' if is_saved else 'SAVE DEVICE'
         self.opts_box.add_widget(btn(save_label,  'cyan',   self._open_save_popup))
         self.opts_box.add_widget(btn('RENAME',    'yellow', self._open_rename_popup))
         if is_saved:
-            self.opts_box.add_widget(btn('REMOVE FROM REGISTRY', 'red_dim', self._remove_device))
+            self.opts_box.add_widget(btn('REMOVE', 'red_dim', self._remove_device))
 
     # ── Controls panel ──────────────────────────────────────────
     def _refresh_ctrl(self):
@@ -523,7 +634,7 @@ class DianaApp(App):
         d = self.selected
         if not d:
             self.ctrl_box.add_widget(
-                lbl('— select a device to see controls —', 'yellow_dim', size=10))
+                lbl('Select a device to see controls', 'white_dim', size=9))
             return
 
         addr  = d['address']
@@ -531,42 +642,38 @@ class DianaApp(App):
         dtype = saved.get('type', d.get('type', 'generic'))
         name  = saved.get('name') or d['name'] or 'Unknown'
 
-        self.ctrl_box.add_widget(lbl(f'CONTROLLING: {name}', 'yellow', size=10, bold=True))
+        self.ctrl_box.add_widget(lbl(name, 'yellow', size=10, bold=True))
 
         if dtype == 'light':
-            row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
-            row.add_widget(btn('TURN ON',  'green',      lambda x: self._light_cmd('on')))
-            row.add_widget(btn('TURN OFF', 'red',        lambda x: self._light_cmd('off')))
+            row = BoxLayout(size_hint_y=None, height=dp(32), spacing=dp(6))
+            row.add_widget(btn('ON',  'green',  lambda x: self._light_cmd('on')))
+            row.add_widget(btn('OFF', 'red',    lambda x: self._light_cmd('off')))
+            row.add_widget(btn('DIM', 'yellow_dim', lambda x: self._light_cmd('dim')))
+            row.add_widget(btn('BRIGHT', 'yellow',  lambda x: self._light_cmd('bright')))
             self.ctrl_box.add_widget(row)
-            row2 = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
-            row2.add_widget(btn('DIM',    'yellow_dim',  lambda x: self._light_cmd('dim')))
-            row2.add_widget(btn('BRIGHT', 'yellow',      lambda x: self._light_cmd('bright')))
-            self.ctrl_box.add_widget(row2)
-            self.ctrl_box.add_widget(
-                lbl('Connect first to send light commands', 'yellow_dim', size=9))
+            self.ctrl_box.add_widget(lbl('Connect first to send commands', 'white_dim', size=8))
 
         elif dtype == 'speaker':
-            row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
+            row = BoxLayout(size_hint_y=None, height=dp(32), spacing=dp(6))
             row.add_widget(btn('CONNECT',    'green', self._do_connect))
             row.add_widget(btn('DISCONNECT', 'red',   self._do_disconnect))
             self.ctrl_box.add_widget(row)
-            self.ctrl_box.add_widget(lbl('Audio controls — coming soon', 'yellow_dim', size=9))
+            self.ctrl_box.add_widget(lbl('Audio controls coming soon', 'white_dim', size=8))
 
         elif dtype == 'tv':
-            row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
-            row.add_widget(btn('POWER ON',  'green', lambda x: self._set_status('TV: POWER ON')))
-            row.add_widget(btn('POWER OFF', 'red',   lambda x: self._set_status('TV: POWER OFF')))
+            row = BoxLayout(size_hint_y=None, height=dp(32), spacing=dp(6))
+            row.add_widget(btn('POWER ON',  'green', lambda x: self._set_status('TV: Power On', 'CMD')))
+            row.add_widget(btn('POWER OFF', 'red',   lambda x: self._set_status('TV: Power Off', 'CMD')))
             self.ctrl_box.add_widget(row)
-            self.ctrl_box.add_widget(
-                lbl('IR blaster required for full TV control', 'yellow_dim', size=9))
+            self.ctrl_box.add_widget(lbl('IR blaster required for full TV control', 'white_dim', size=8))
 
         else:
-            row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
+            row = BoxLayout(size_hint_y=None, height=dp(32), spacing=dp(6))
             row.add_widget(btn('CONNECT',    'green', self._do_connect))
             row.add_widget(btn('DISCONNECT', 'red',   self._do_disconnect))
             self.ctrl_box.add_widget(row)
             self.ctrl_box.add_widget(
-                lbl('Tag a device type to unlock specific controls', 'yellow_dim', size=9))
+                lbl('Tag a device type to unlock specific controls', 'white_dim', size=8))
 
     # ── BLE connect / disconnect ────────────────────────────────
     def _do_connect(self, *_):
@@ -574,10 +681,10 @@ class DianaApp(App):
             return
         addr = self.selected['address']
         if addr in self.connections:
-            self._set_status('ALREADY CONNECTED')
+            self._set_status('Already connected', 'INFO')
             return
         name = self.selected.get('name') or addr
-        self._set_status(f'CONNECTING → {name}…')
+        self._set_status(f'Connecting to {name}…', 'CONNECTING')
         self.scan_btn.disabled = True
         self._run_ble(self._connect_device(addr, name))
 
@@ -599,7 +706,7 @@ class DianaApp(App):
 
     def _on_connected(self, addr: str, name: str):
         self.scan_btn.disabled = False
-        self._set_status(f'CONNECTED: {name}')
+        self._set_status(f'Connected: {name}', 'CONNECTED')
         self._update_item_connection(addr, True)
         if self.selected and self.selected['address'] == addr:
             self._refresh_opts()
@@ -607,7 +714,7 @@ class DianaApp(App):
 
     def _on_connect_failed(self, addr: str, name: str, reason: str):
         self.scan_btn.disabled = False
-        self._set_status(f'CONNECTION FAILED: {name} — {reason}')
+        self._set_status(f'Connection failed: {name} — {reason}', 'ERROR')
         log.warning('Connection failed for %s: %s', addr, reason)
 
     def _do_disconnect(self, *_):
@@ -616,10 +723,10 @@ class DianaApp(App):
         addr   = self.selected['address']
         client = self.connections.get(addr)
         if not client:
-            self._set_status('NOT CONNECTED')
+            self._set_status('Not connected', 'INFO')
             return
         name = self.selected.get('name') or addr
-        self._set_status(f'DISCONNECTING: {name}…')
+        self._set_status(f'Disconnecting: {name}…', 'INFO')
         self._run_ble(self._disconnect_device(addr, name, client))
 
     async def _disconnect_device(self, addr: str, name: str, client: BleakClient):
@@ -640,7 +747,7 @@ class DianaApp(App):
     def _on_disconnected(self, addr: str, name: str = ''):
         self.connections.pop(addr, None)
         label = name or self.registry.get(addr, {}).get('name') or addr
-        self._set_status(f'DISCONNECTED: {label}')
+        self._set_status(f'Disconnected: {label}', 'IDLE')
         self._update_item_connection(addr, False)
         if self.selected and self.selected['address'] == addr:
             self._refresh_opts()
@@ -652,18 +759,18 @@ class DianaApp(App):
                 item.set_connected(connected)
                 break
 
-    # ── Light commands (BLE GATT write) ───────────────────────
+    # ── Light commands ─────────────────────────────────────────
     def _light_cmd(self, cmd: str):
         if not self.selected:
             return
         addr   = self.selected['address']
         client = self.connections.get(addr)
         name   = self.selected.get('name', 'Light')
-        labels = {'on': 'ON ◉', 'off': 'OFF ○', 'dim': 'DIM ▽', 'bright': 'BRIGHT △'}
         if not client:
-            self._set_status(f'NOT CONNECTED — connect to {name} first')
+            self._set_status(f'Connect to {name} first', 'ERROR')
             return
-        self._set_status(f'{name}: {labels.get(cmd, cmd.upper())}')
+        labels = {'on': 'On ◉', 'off': 'Off ○', 'dim': 'Dim ▽', 'bright': 'Bright △'}
+        self._set_status(f'{name}: {labels.get(cmd, cmd)}', 'CMD')
         self._run_ble(self._write_light(client, cmd, name))
 
     async def _write_light(self, client: BleakClient, cmd: str, name: str):
@@ -675,34 +782,36 @@ class DianaApp(App):
                     if 'write' in char.properties or 'write-without-response' in char.properties:
                         await client.write_gatt_char(char.uuid, payload, response=False)
                         Clock.schedule_once(
-                            lambda dt, c=cmd: self._set_status(f'{name}: {c.upper()} sent'))
+                            lambda dt, c=cmd: self._set_status(f'{name}: {c} sent', 'CMD'))
                         return
-            Clock.schedule_once(lambda dt: self._set_status('No writable characteristic found'))
+            Clock.schedule_once(
+                lambda dt: self._set_status('No writable characteristic found', 'ERROR'))
         except BleakError as e:
             err = str(e)
             log.error('Light write failed: %s', err)
-            Clock.schedule_once(lambda dt: self._set_status(f'WRITE ERROR: {err}'))
+            Clock.schedule_once(lambda dt: self._set_status(f'Write error: {err}', 'ERROR'))
 
     # ── Popups ──────────────────────────────────────────────────
-    def _popup(self, title: str, content, size=(0.44, 0.36)) -> Popup:
+    def _popup(self, title: str, content, size=(0.42, 0.38)) -> Popup:
         return Popup(title=title, title_color=C['cyan'], content=content,
-                     size_hint=size, background_color=(0.01, 0.06, 0.09, 1),
-                     separator_color=C['cyan'])
+                     size_hint=size, background_color=(0.010, 0.048, 0.062, 1),
+                     separator_color=C['cyan_dim'], title_size=dp(13))
 
     def _open_rename_popup(self, *_):
         if not self.selected:
             return
-        wrap = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(14))
-        wrap.add_widget(lbl('New device name:', 'cyan_dim', size=11))
+        wrap = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(16))
+        wrap.add_widget(lbl('New name:', 'cyan_dim', size=10))
         txt = TextInput(
             text=self.selected.get('name', ''),
             font_size=dp(13), multiline=False,
             size_hint_y=None, height=dp(40),
-            background_color=(0.02, 0.08, 0.10, 1),
+            background_color=(0.015, 0.065, 0.085, 1),
             foreground_color=C['white'], cursor_color=C['cyan'],
+            padding=(dp(8), dp(10)),
         )
         wrap.add_widget(txt)
-        row = BoxLayout(size_hint_y=None, height=dp(36), spacing=dp(8))
+        row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(8))
         p = self._popup('RENAME DEVICE', wrap)
 
         def confirm(*_):
@@ -712,14 +821,13 @@ class DianaApp(App):
             addr = self.selected['address']
             self.registry.setdefault(addr, {})['name'] = new
             if not save_registry(self.registry):
-                self._set_status('ERROR: could not save registry')
+                self._set_status('Error: could not save registry', 'ERROR')
                 return
             self.selected['name'] = new
             if self.sel_item:
                 self.sel_item.update_name(new)
-            self._set_status(f'RENAMED → {new}')
-            self._refresh_opts()
-            self._refresh_ctrl()
+            self._set_status(f'Renamed → {new}', 'INFO')
+            self._refresh_opts(); self._refresh_ctrl()
             p.dismiss()
 
         row.add_widget(btn('CONFIRM', 'green', confirm))
@@ -732,27 +840,28 @@ class DianaApp(App):
             return
         addr  = self.selected['address']
         saved = self.registry.get(addr, {})
-        wrap  = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(14))
-        wrap.add_widget(lbl('Device name:', 'cyan_dim', size=11))
+        wrap  = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(16))
+        wrap.add_widget(lbl('Device name:', 'cyan_dim', size=10))
         name_in = TextInput(
             text=saved.get('name') or self.selected.get('name', ''),
             font_size=dp(13), multiline=False,
             size_hint_y=None, height=dp(40),
-            background_color=(0.02, 0.08, 0.10, 1),
+            background_color=(0.015, 0.065, 0.085, 1),
             foreground_color=C['white'], cursor_color=C['cyan'],
+            padding=(dp(8), dp(10)),
         )
         wrap.add_widget(name_in)
-        wrap.add_widget(lbl('Device type:', 'cyan_dim', size=11))
+        wrap.add_widget(lbl('Device type:', 'cyan_dim', size=10))
         type_spin = Spinner(
             text=saved.get('type', 'generic'),
             values=DEVICE_TYPES,
             size_hint_y=None, height=dp(36),
-            background_color=(0.02, 0.08, 0.10, 1),
-            color=C['white'], font_size=dp(12),
+            background_color=(0.015, 0.065, 0.085, 1),
+            color=C['white'], font_size=dp(11),
         )
         wrap.add_widget(type_spin)
-        row = BoxLayout(size_hint_y=None, height=dp(36), spacing=dp(8))
-        p = self._popup('SAVE DEVICE', wrap, size=(0.44, 0.46))
+        row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(8))
+        p = self._popup('SAVE DEVICE', wrap, size=(0.42, 0.48))
 
         def confirm(*_):
             name  = name_in.text.strip() or 'Unknown'
@@ -762,16 +871,15 @@ class DianaApp(App):
                 'last_rssi': self.selected.get('rssi', -70),
             }
             if not save_registry(self.registry):
-                self._set_status('ERROR: could not save registry')
+                self._set_status('Error: could not save registry', 'ERROR')
                 return
             self.selected['name'] = name
             self.selected['type'] = dtype
             if self.sel_item:
                 self.sel_item.update_name(name)
                 self.sel_item.dtype = dtype
-            self._set_status(f'SAVED: {name}  [{dtype}]')
-            self._refresh_opts()
-            self._refresh_ctrl()
+            self._set_status(f'Saved: {name}  [{dtype}]', 'INFO')
+            self._refresh_opts(); self._refresh_ctrl()
             p.dismiss()
 
         row.add_widget(btn('SAVE',   'cyan', confirm))
@@ -786,14 +894,31 @@ class DianaApp(App):
         name = self.registry.get(addr, {}).get('name', addr)
         self.registry.pop(addr, None)
         if not save_registry(self.registry):
-            self._set_status('ERROR: could not save registry')
+            self._set_status('Error: could not save registry', 'ERROR')
             return
-        self._set_status(f'REMOVED: {name}')
-        self._refresh_opts()
-        self._refresh_ctrl()
+        self._set_status(f'Removed: {name}', 'INFO')
+        self._refresh_opts(); self._refresh_ctrl()
 
-    def _set_status(self, text: str):
-        self.status_lbl.text = text
+    # ── Status helpers ─────────────────────────────────────────
+    def _set_status(self, text: str, state: str = 'IDLE'):
+        colors = {
+            'IDLE':       C['cyan_dim'],
+            'SCANNING':   C['green'],
+            'CONNECTED':  C['green'],
+            'CONNECTING': C['yellow'],
+            'CMD':        C['yellow'],
+            'INFO':       C['white_dim'],
+            'ERROR':      C['red'],
+        }
+        self.status_lbl.text  = text
+        self.status_lbl.color = colors.get(state, C['cyan_dim'])
+        dot_colors = {
+            'SCANNING': '▶', 'CONNECTED': '●', 'CONNECTING': '◌',
+            'ERROR': '✕', 'CMD': '▷',
+        }
+        dot = dot_colors.get(state, '●')
+        self.bar_lbl.text  = f'{dot} {text}'
+        self.bar_lbl.color = colors.get(state, C['cyan_dim'])
 
 
 if __name__ == '__main__':
