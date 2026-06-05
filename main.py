@@ -1,5 +1,8 @@
 import os, json, math, random, asyncio, threading, logging
-os.environ['KIVY_MOUSE'] = 'mouse,disable_multitouch'
+
+from kivy.config import Config
+Config.set('input', 'mouse', 'mouse,disable_multitouch')
+Config.set('graphics', 'show_cursor', '1')
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -21,7 +24,6 @@ logging.basicConfig(level=logging.INFO, format='[DIANA] %(levelname)s: %(message
 log = logging.getLogger(__name__)
 
 Window.clearcolor = (0.008, 0.047, 0.063, 1)
-Window.show_cursor = True
 
 # ── Colour palette ─────────────────────────────────────────────────────────────
 C = {
