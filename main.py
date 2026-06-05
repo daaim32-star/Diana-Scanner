@@ -435,8 +435,9 @@ class DianaApp(App):
             async with BleakScanner(cb):
                 await asyncio.sleep(SCAN_TIMEOUT)
         except BleakError as e:
-            log.error('Scan failed: %s', e)
-            Clock.schedule_once(lambda dt: self._set_status(f'SCAN ERROR: {e}'))
+            err = str(e)
+            log.error('Scan failed: %s', err)
+            Clock.schedule_once(lambda dt: self._set_status(f'SCAN ERROR: {err}'))
         finally:
             Clock.schedule_once(lambda dt: self._scan_done())
 
@@ -591,7 +592,8 @@ class DianaApp(App):
             self.connections[addr] = client
             Clock.schedule_once(lambda dt: self._on_connected(addr, name))
         except BleakError as e:
-            Clock.schedule_once(lambda dt: self._on_connect_failed(addr, name, str(e)))
+            err = str(e)
+            Clock.schedule_once(lambda dt: self._on_connect_failed(addr, name, err))
         except asyncio.TimeoutError:
             Clock.schedule_once(lambda dt: self._on_connect_failed(addr, name, 'timeout'))
 
@@ -677,8 +679,9 @@ class DianaApp(App):
                         return
             Clock.schedule_once(lambda dt: self._set_status('No writable characteristic found'))
         except BleakError as e:
-            log.error('Light write failed: %s', e)
-            Clock.schedule_once(lambda dt: self._set_status(f'WRITE ERROR: {e}'))
+            err = str(e)
+            log.error('Light write failed: %s', err)
+            Clock.schedule_once(lambda dt: self._set_status(f'WRITE ERROR: {err}'))
 
     # ── Popups ──────────────────────────────────────────────────
     def _popup(self, title: str, content, size=(0.44, 0.36)) -> Popup:
