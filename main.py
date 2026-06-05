@@ -420,10 +420,10 @@ class DianaApp(App):
         mid.add_widget(radar_panel)
 
         # Controls panel
-        ctrl_panel = panel('yellow')
+        ctrl_panel = panel('cyan')
         ctrl_panel.size_hint_y = 0.37
-        ctrl_panel.add_widget(section_title('DEVICE CONTROLS', 'yellow'))
-        ctrl_panel.add_widget(divider('yellow'))
+        ctrl_panel.add_widget(section_title('DEVICE CONTROLS', 'cyan'))
+        ctrl_panel.add_widget(divider('cyan'))
         self.ctrl_box = BoxLayout(orientation='vertical', spacing=dp(5))
         self.ctrl_box.add_widget(
             lbl('Select a device to see controls', 'white_dim', size=9))
