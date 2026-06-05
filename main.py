@@ -374,6 +374,7 @@ class DianaApp(App):
 
         root.add_widget(body)
 
+        Window.show_cursor = True
         Clock.schedule_once(self._load_saved_into_list, 0.3)
         return root
 
