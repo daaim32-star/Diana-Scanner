@@ -5,9 +5,8 @@ os.environ.setdefault('KIVY_WINDOW', 'x11')
 from kivy.config import Config
 Config.set('input', 'mouse', 'mouse,disable_multitouch')
 Config.set('graphics', 'show_cursor', '1')
-Config.set('graphics', 'minimum_width', '1024')
-Config.set('graphics', 'minimum_height', '600')
-Config.set('graphics', 'window_state', 'maximized')
+Config.set('graphics', 'minimum_width', '800')
+Config.set('graphics', 'minimum_height', '500')
 Config.set('kivy', 'text_antialiasing', '1')
 
 from kivy.app import App
@@ -477,7 +476,8 @@ class DianaApp(App):
         tc.add_widget(t1); tc.add_widget(t2)
         hdr.add_widget(tc); hdr.add_widget(Widget())
         self.status_lbl = Label(text='● READY', font_size=dp(11.5), color=C['cyan_dim'],
-                                halign='right', text_size=(dp(400), None))
+                                halign='right')
+        self.status_lbl.bind(size=lambda inst, v: setattr(inst, 'text_size', v))
         hdr.add_widget(self.status_lbl)
         hdr.add_widget(Label(text=VERSION, font_size=dp(10.5), color=C['purple_dim'],
                              size_hint_x=None, width=dp(36),
@@ -583,7 +583,8 @@ class DianaApp(App):
             inst._top.pos=(inst.x,inst.top-dp(1)); inst._top.size=(inst.width,dp(1))
         bar.bind(pos=_bar_upd, size=_bar_upd)
         self.bar_lbl = Label(text='● IDLE', font_size=dp(10), color=C['cyan_dim'],
-                             halign='left', text_size=(dp(500), None))
+                             halign='left')
+        self.bar_lbl.bind(size=lambda inst, v: setattr(inst, 'text_size', v))
         bar.add_widget(self.bar_lbl)
         bar.add_widget(Label(text=f'DIANA {VERSION}  ·  BLE + Govee LAN',
                              font_size=dp(10), color=C['white_dim'],
@@ -596,7 +597,8 @@ class DianaApp(App):
 
     def on_start(self):
         Window.show_cursor = True
-        Clock.schedule_once(lambda dt: setattr(Window,'show_cursor',True), 0.5)
+        Clock.schedule_once(lambda dt: setattr(Window, 'show_cursor', True), 0.5)
+        Clock.schedule_once(lambda dt: Window.maximize(), 0.1)
 
     def on_stop(self):
         for client in list(self.connections.values()):
