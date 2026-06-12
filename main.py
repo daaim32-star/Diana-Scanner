@@ -478,7 +478,7 @@ class DianaApp(App):
         self.status_lbl = Label(text='● READY', font_size=dp(11.5), color=C['cyan_dim'],
                                 halign='right', text_size=(dp(400), None))
         hdr.add_widget(self.status_lbl)
-        hdr.add_widget(Label(text=VERSION, font_size=dp(8.5), color=C['purple_dim'],
+        hdr.add_widget(Label(text=VERSION, font_size=dp(10.5), color=C['purple_dim'],
                              size_hint_x=None, width=dp(36),
                              halign='right', text_size=(dp(36), None)))
         root.add_widget(hdr)
@@ -510,7 +510,7 @@ class DianaApp(App):
 
         self._left_panel = panel('white')
         self._left_panel.padding = (dp(10), dp(10))
-        self.count_lbl = lbl('No devices', 'white_dim', size=9)
+        self.count_lbl = lbl('No devices', 'white_dim', size=11)
         self._left_panel.add_widget(self.count_lbl)
         self._left_panel.add_widget(divider('white'))
         self._left_scroll = ScrollView(bar_width=dp(2), bar_color=C['cyan_dim'],
@@ -527,7 +527,7 @@ class DianaApp(App):
         radar_panel = panel('green'); radar_panel.size_hint_y = 0.62
         rh = BoxLayout(size_hint_y=None, height=dp(24), spacing=dp(8))
         rh.add_widget(section_title('SIGNAL RADAR', 'green')); rh.add_widget(Widget())
-        self._govee_count_lbl = lbl('', 'green_dim', size=8, halign='right', height=dp(24))
+        self._govee_count_lbl = lbl('', 'green_dim', size=10, halign='right', height=dp(24))
         rh.add_widget(self._govee_count_lbl)
         radar_panel.add_widget(rh)
         self.radar = RadarWidget(size_hint_y=1)
@@ -551,7 +551,7 @@ class DianaApp(App):
         ctrl_panel.add_widget(section_title('DEVICE CONTROLS', 'cyan'))
         ctrl_panel.add_widget(divider('cyan'))
         self.ctrl_box = BoxLayout(orientation='vertical', spacing=dp(6))
-        self.ctrl_box.add_widget(lbl('Select a device to see controls', 'white_dim', size=9))
+        self.ctrl_box.add_widget(lbl('Select a device to see controls', 'white_dim', size=11))
         ctrl_panel.add_widget(self.ctrl_box)
         mid.add_widget(ctrl_panel)
         body.add_widget(mid)
@@ -561,7 +561,7 @@ class DianaApp(App):
         right.add_widget(section_title('DEVICE OPTIONS', 'cyan'))
         right.add_widget(divider('cyan'))
         self.opts_box = BoxLayout(orientation='vertical', spacing=dp(6))
-        self.opts_box.add_widget(lbl('Select a device', 'white_dim', size=9))
+        self.opts_box.add_widget(lbl('Select a device', 'white_dim', size=11))
         right.add_widget(self.opts_box)
         body.add_widget(right)
         root.add_widget(body)
@@ -756,29 +756,29 @@ class DianaApp(App):
         ips = [self._govee_ip(a) for a in self._multi_sel if self._govee_ip(a)]
         n = len(self._multi_sel)
         if n == 0:
-            self.ctrl_box.add_widget(lbl('Tap saved lights to select', 'white_dim', size=9)); return
+            self.ctrl_box.add_widget(lbl('Tap saved lights to select', 'white_dim', size=11)); return
         self.ctrl_box.add_widget(lbl(f'{n} lights selected', 'orange', size=11, bold=True))
         if ips: self._add_light_controls(ips)
-        else: self.ctrl_box.add_widget(lbl('No Govee IPs assigned to selection', 'white_dim', size=9))
+        else: self.ctrl_box.add_widget(lbl('No Govee IPs assigned to selection', 'white_dim', size=11))
 
     def _refresh_opts(self):
         self.opts_box.clear_widgets()
         d = self.selected
         if not d:
-            self.opts_box.add_widget(lbl('Select a device', 'white_dim', size=9)); return
+            self.opts_box.add_widget(lbl('Select a device', 'white_dim', size=11)); return
         addr = d['address']; saved = self.registry.get(addr, {})
         name = saved.get('name') or d['name'] or 'Unknown'
         dtype = saved.get('type','generic')
         is_saved = addr in self.registry; is_conn = addr in self.connections
         icon = TYPE_ICON.get(dtype,'')
         self.opts_box.add_widget(lbl(f'{icon}  {name}' if icon else name, 'white', size=13, bold=True, height=dp(24)))
-        self.opts_box.add_widget(lbl(addr, 'white_dim', size=8))
-        self.opts_box.add_widget(lbl(f"{dtype.upper()}   {signal_bars(d['rssi'])}  {d['rssi']} dBm", 'cyan_dim', size=8.5, height=dp(18)))
+        self.opts_box.add_widget(lbl(addr, 'white_dim', size=10))
+        self.opts_box.add_widget(lbl(f"{dtype.upper()}   {signal_bars(d['rssi'])}  {d['rssi']} dBm", 'cyan_dim', size=10.5, height=dp(18)))
         self.opts_box.add_widget(divider('cyan'))
         if is_conn:
             cr = BoxLayout(size_hint_y=None, height=dp(20), spacing=dp(6))
             cr.add_widget(Label(text='●', font_size=dp(10), color=C['green'], size_hint_x=None, width=dp(16)))
-            cr.add_widget(lbl('CONNECTED', 'green', size=9.5, bold=True, height=dp(20)))
+            cr.add_widget(lbl('CONNECTED', 'green', size=11.5, bold=True, height=dp(20)))
             self.opts_box.add_widget(cr)
             self.opts_box.add_widget(btn('DISCONNECT', 'red', self._do_disconnect))
         else:
@@ -792,7 +792,7 @@ class DianaApp(App):
         self.ctrl_box.clear_widgets()
         d = self.selected
         if not d:
-            self.ctrl_box.add_widget(lbl('Select a device to see controls', 'white_dim', size=9)); return
+            self.ctrl_box.add_widget(lbl('Select a device to see controls', 'white_dim', size=11)); return
         addr = d['address']; saved = self.registry.get(addr, {})
         dtype = saved.get('type', d.get('type','generic'))
         name = saved.get('name') or d['name'] or 'Unknown'
@@ -805,36 +805,36 @@ class DianaApp(App):
                 row.add_widget(btn('CONNECT','green',self._do_connect))
                 row.add_widget(btn('DISCONNECT','red',self._do_disconnect))
                 self.ctrl_box.add_widget(row)
-                self.ctrl_box.add_widget(lbl('Save device & assign Govee IP for LAN control','white_dim',size=8.5))
+                self.ctrl_box.add_widget(lbl('Save device & assign Govee IP for LAN control','white_dim',size=10.5))
         elif dtype == 'speaker':
             row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
             row.add_widget(btn('CONNECT','green',self._do_connect))
             row.add_widget(btn('DISCONNECT','red',self._do_disconnect))
             self.ctrl_box.add_widget(row)
-            self.ctrl_box.add_widget(lbl('Audio controls coming soon','white_dim',size=8.5))
+            self.ctrl_box.add_widget(lbl('Audio controls coming soon','white_dim',size=10.5))
         elif dtype == 'tv':
             row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
             row.add_widget(btn('POWER ON','green',lambda x: self._set_status('TV: Power On','CMD')))
             row.add_widget(btn('POWER OFF','red',lambda x: self._set_status('TV: Power Off','CMD')))
             self.ctrl_box.add_widget(row)
-            self.ctrl_box.add_widget(lbl('IR blaster required for full TV control','white_dim',size=8.5))
+            self.ctrl_box.add_widget(lbl('IR blaster required for full TV control','white_dim',size=10.5))
         else:
             row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
             row.add_widget(btn('CONNECT','green',self._do_connect))
             row.add_widget(btn('DISCONNECT','red',self._do_disconnect))
             self.ctrl_box.add_widget(row)
-            self.ctrl_box.add_widget(lbl('Tag a device type to unlock controls','white_dim',size=8.5))
+            self.ctrl_box.add_widget(lbl('Tag a device type to unlock controls','white_dim',size=10.5))
 
     def _add_light_controls(self, ips):
         on_off = BoxLayout(size_hint_y=None, height=dp(36), spacing=dp(8))
         on_off.add_widget(btn('◉  ON','green',lambda x: self._lc_all(ips,'on')))
         on_off.add_widget(btn('○  OFF','red',lambda x: self._lc_all(ips,'off')))
         self.ctrl_box.add_widget(on_off)
-        self.ctrl_box.add_widget(lbl('Brightness','white_dim',size=9))
+        self.ctrl_box.add_widget(lbl('Brightness','white_dim',size=11))
         sl = mk_slider()
         sl.bind(on_touch_up=lambda inst,touch: self._lc_all(ips,'brightness',int(inst.value)) if inst.collide_point(*touch.pos) else None)
         self.ctrl_box.add_widget(sl)
-        self.ctrl_box.add_widget(lbl('Color','white_dim',size=9))
+        self.ctrl_box.add_widget(lbl('Color','white_dim',size=11))
         cr = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(5))
         for (label,ck,(r,g,b)) in [('WHITE','white',(255,255,220)),('WARM','yellow',(255,160,40)),
                 ('RED','red',(255,20,20)),('BLUE','cyan',(20,140,255)),
@@ -1117,7 +1117,7 @@ class DianaApp(App):
                                     color=C['yellow'], font_size=dp(11))
             wrap.add_widget(govee_spinner)
             if not self._govee_devs:
-                wrap.add_widget(lbl('Tap FIND GOVEE first to populate list','yellow_dim',size=8.5))
+                wrap.add_widget(lbl('Tap FIND GOVEE first to populate list','yellow_dim',size=10.5))
         p = self._popup('SAVE DEVICE', wrap, size=(0.46, 0.56))
         def confirm(*_):
             name = name_in.text.strip() or 'Unknown'; dtype = type_spin.text
