@@ -5,6 +5,9 @@ os.environ.setdefault('KIVY_WINDOW', 'x11')
 from kivy.config import Config
 Config.set('input', 'mouse', 'mouse,disable_multitouch')
 Config.set('graphics', 'show_cursor', '1')
+Config.set('graphics', 'minimum_width', '1024')
+Config.set('graphics', 'minimum_height', '600')
+Config.set('kivy', 'text_antialiasing', '1')
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -171,7 +174,7 @@ def panel(border_color_key, radius=8):
     layout.bind(pos=_upd, size=_upd)
     return layout
 
-def lbl(text, color_key, size=11, bold=False, halign='left', height=dp(20)):
+def lbl(text, color_key, size=12, bold=False, halign='left', height=dp(20)):
     l = Label(text=text, font_size=dp(size), color=C[color_key],
               size_hint_y=None, height=height, halign=halign, valign='middle', bold=bold)
     l.bind(size=lambda inst, v: setattr(inst, 'text_size', v))
@@ -187,13 +190,13 @@ def section_title(text, color_key):
     tick.bind(pos=lambda i,_: setattr(i._rect,'pos',i.pos),
               size=lambda i,_: setattr(i._rect,'size',i.size))
     row.add_widget(tick)
-    row.add_widget(lbl(text, color_key, size=10, bold=True, height=dp(24)))
+    row.add_widget(lbl(text, color_key, size=11, bold=True, height=dp(24)))
     return row
 
 def btn(text, color_key, cb=None, height=dp(34), radius=6):
     ck = C[color_key]
     b = Button(text=text, size_hint_y=None, height=height,
-               background_color=(0,0,0,0), color=ck, font_size=dp(10.5), bold=True)
+               background_color=(0,0,0,0), color=ck, font_size=dp(12), bold=True)
     with b.canvas.before:
         # Base fill
         Color(*ck[:3], 0.18)
@@ -326,13 +329,13 @@ class DeviceItem(BoxLayout):
         icon = TYPE_ICON.get(dtype, '')
         self._name_lbl = Label(
             text=f'{icon}  {display_name}'.strip() if icon else display_name,
-            font_size=dp(11.5), color=C['white'], bold=True,
+            font_size=dp(13), color=C['white'], bold=True,
             size_hint_y=None, height=dp(22), halign='left', valign='middle')
         self._name_lbl.bind(size=lambda inst,v: setattr(inst,'text_size',v))
         self.add_widget(self._name_lbl)
         self._sub_lbl = Label(
             text=f'{address}   {signal_bars(rssi)}  {rssi} dBm',
-            font_size=dp(9), color=C['cyan_dim'],
+            font_size=dp(10), color=C['cyan_dim'],
             size_hint_y=None, height=dp(16), halign='left', valign='middle')
         self._sub_lbl.bind(size=lambda inst,v: setattr(inst,'text_size',v))
         self.add_widget(self._sub_lbl)
@@ -468,11 +471,11 @@ class DianaApp(App):
         t1 = Label(text='DIANA', font_size=dp(22), color=C['cyan'], bold=True,
                    halign='left', text_size=(dp(120), None), size_hint_y=None, height=dp(28))
         t2 = Label(text='Device Interface & Network Analyser',
-                   font_size=dp(7.5), color=C['white_dim'],
+                   font_size=dp(9), color=C['white_dim'],
                    halign='left', text_size=(dp(250), None), size_hint_y=None, height=dp(14))
         tc.add_widget(t1); tc.add_widget(t2)
         hdr.add_widget(tc); hdr.add_widget(Widget())
-        self.status_lbl = Label(text='● READY', font_size=dp(10), color=C['cyan_dim'],
+        self.status_lbl = Label(text='● READY', font_size=dp(11.5), color=C['cyan_dim'],
                                 halign='right', text_size=(dp(400), None))
         hdr.add_widget(self.status_lbl)
         hdr.add_widget(Label(text=VERSION, font_size=dp(8.5), color=C['purple_dim'],
@@ -574,11 +577,11 @@ class DianaApp(App):
             inst._bg.pos=inst.pos; inst._bg.size=inst.size
             inst._top.pos=(inst.x,inst.top-dp(1)); inst._top.size=(inst.width,dp(1))
         bar.bind(pos=_bar_upd, size=_bar_upd)
-        self.bar_lbl = Label(text='● IDLE', font_size=dp(8.5), color=C['cyan_dim'],
+        self.bar_lbl = Label(text='● IDLE', font_size=dp(10), color=C['cyan_dim'],
                              halign='left', text_size=(dp(500), None))
         bar.add_widget(self.bar_lbl)
         bar.add_widget(Label(text=f'DIANA {VERSION}  ·  BLE + Govee LAN',
-                             font_size=dp(8.5), color=C['white_dim'],
+                             font_size=dp(10), color=C['white_dim'],
                              halign='right', text_size=(dp(300), None)))
         root.add_widget(bar)
 
