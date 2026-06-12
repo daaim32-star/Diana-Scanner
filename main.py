@@ -842,12 +842,29 @@ class DianaApp(App):
         sl.bind(on_touch_up=lambda inst,touch: self._lc_all(ips,'brightness',int(inst.value)) if inst.collide_point(*touch.pos) else None)
         self.ctrl_box.add_widget(sl)
         self.ctrl_box.add_widget(lbl('Color','white_dim',size=11))
-        cr = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(5))
-        for (label,ck,(r,g,b)) in [('WHITE','white',(255,255,220)),('WARM','yellow',(255,160,40)),
-                ('RED','red',(255,20,20)),('BLUE','cyan',(20,140,255)),
-                ('GREEN','green',(20,255,80)),('PURPLE','purple',(160,40,255))]:
-            cr.add_widget(btn(label,ck,lambda x,ri=r,gi=g,bi=b: self._lc_all(ips,'color',(ri,gi,bi)),height=dp(34)))
-        self.ctrl_box.add_widget(cr)
+        all_colors = [
+            # Row 1 — warm spectrum
+            ('WHITE',  'white',  (255, 255, 220)),
+            ('WARM',   'yellow', (255, 160,  40)),
+            ('YELLOW', 'yellow', (255, 220,   0)),
+            ('ORANGE', 'yellow', (255,  90,   0)),
+            ('RED',    'red',    (255,  15,  15)),
+            ('PINK',   'red',    (255,  50, 140)),
+            # Row 2 — cool spectrum
+            ('VIOLET', 'purple', (200,   0, 255)),
+            ('PURPLE', 'purple', (130,  30, 220)),
+            ('BLUE',   'cyan',   ( 20, 100, 255)),
+            ('ICE',    'cyan',   (100, 210, 255)),
+            ('TEAL',   'cyan',   (  0, 220, 180)),
+            ('GREEN',  'green',  ( 20, 255,  70)),
+        ]
+        for row_colors in [all_colors[:6], all_colors[6:]]:
+            cr = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(5))
+            for (label, ck, (r, g, b)) in row_colors:
+                cr.add_widget(btn(label, ck,
+                    lambda x, ri=r, gi=g, bi=b: self._lc_all(ips, 'color', (ri, gi, bi)),
+                    height=dp(34)))
+            self.ctrl_box.add_widget(cr)
         rgb = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
         ti_args = dict(multiline=False, font_size=dp(11), size_hint_x=None, width=dp(42),
                        height=dp(34), size_hint_y=None, background_color=(0.04,0.04,0.10,1),
