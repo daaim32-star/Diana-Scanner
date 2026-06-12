@@ -334,7 +334,7 @@ class DeviceItem(BoxLayout):
         self._name_lbl.bind(size=lambda inst,v: setattr(inst,'text_size',v))
         self.add_widget(self._name_lbl)
         self._sub_lbl = Label(
-            text=f'{address}   {signal_bars(rssi)}  {rssi} dBm',
+            text=f'···{address[-8:]}  {signal_bars(rssi)}  {rssi} dBm',
             font_size=dp(10), color=C['cyan_dim'],
             size_hint_y=None, height=dp(16), halign='left', valign='middle')
         self._sub_lbl.bind(size=lambda inst,v: setattr(inst,'text_size',v))
@@ -347,8 +347,8 @@ class DeviceItem(BoxLayout):
         self._name_lbl.text = f'{icon}  {name}'.strip() if icon else name
 
     def _update_sub(self):
-        conn = '   ● LIVE' if self.connected else ''
-        self._sub_lbl.text  = f'{self.address}   {signal_bars(self.rssi)}  {self.rssi} dBm{conn}'
+        conn = '  ● LIVE' if self.connected else ''
+        self._sub_lbl.text  = f'···{self.address[-8:]}  {signal_bars(self.rssi)}  {self.rssi} dBm{conn}'
         self._sub_lbl.color = C['green_dim'] if self.connected else C['cyan_dim']
 
     def set_connected(self, val):
@@ -524,7 +524,7 @@ class DianaApp(App):
 
         # Middle
         mid = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_x=0.54)
-        radar_panel = panel('green'); radar_panel.size_hint_y = 0.62
+        radar_panel = panel('green'); radar_panel.size_hint_y = 0.55
         rh = BoxLayout(size_hint_y=None, height=dp(24), spacing=dp(8))
         rh.add_widget(section_title('SIGNAL RADAR', 'green')); rh.add_widget(Widget())
         self._govee_count_lbl = lbl('', 'green_dim', size=10, halign='right', height=dp(24))
@@ -547,12 +547,16 @@ class DianaApp(App):
             size=lambda i,_: setattr(i._bg,'size',i.size))
         radar_panel.add_widget(self.progress)
         mid.add_widget(radar_panel)
-        ctrl_panel = panel('cyan'); ctrl_panel.size_hint_y = 0.38
+        ctrl_panel = panel('cyan'); ctrl_panel.size_hint_y = 0.45
         ctrl_panel.add_widget(section_title('DEVICE CONTROLS', 'cyan'))
         ctrl_panel.add_widget(divider('cyan'))
-        self.ctrl_box = BoxLayout(orientation='vertical', spacing=dp(6))
+        ctrl_scroll = ScrollView(bar_width=dp(2), bar_color=C['cyan_dim'],
+                                 bar_inactive_color=C['white_bg'])
+        self.ctrl_box = GridLayout(cols=1, spacing=dp(6), size_hint_y=None)
+        self.ctrl_box.bind(minimum_height=self.ctrl_box.setter('height'))
         self.ctrl_box.add_widget(lbl('Select a device to see controls', 'white_dim', size=11))
-        ctrl_panel.add_widget(self.ctrl_box)
+        ctrl_scroll.add_widget(self.ctrl_box)
+        ctrl_panel.add_widget(ctrl_scroll)
         mid.add_widget(ctrl_panel)
         body.add_widget(mid)
 
