@@ -467,12 +467,14 @@ class DianaApp(App):
             inst._gl.size = (inst.width, inst.height * 0.5)
             inst._bd.pos = (inst.x, inst.y); inst._bd.size = (inst.width, dp(1))
         hdr.bind(pos=_hdr_upd, size=_hdr_upd)
-        tc = BoxLayout(orientation='vertical', size_hint_x=None, width=dp(210))
+        tc = BoxLayout(orientation='vertical', size_hint_x=None, width=dp(280), spacing=dp(2))
         t1 = Label(text='DIANA', font_size=dp(22), color=C['cyan'], bold=True,
-                   halign='left', text_size=(dp(120), None), size_hint_y=None, height=dp(28))
+                   halign='left', size_hint_y=None, height=dp(28))
+        t1.bind(size=lambda inst, v: setattr(inst, 'text_size', v))
         t2 = Label(text='Device Interface & Network Analyser',
-                   font_size=dp(9), color=C['white_dim'],
-                   halign='left', text_size=(dp(250), None), size_hint_y=None, height=dp(14))
+                   font_size=dp(10), color=C['white_dim'],
+                   halign='left', size_hint_y=None, height=dp(16))
+        t2.bind(size=lambda inst, v: setattr(inst, 'text_size', v))
         tc.add_widget(t1); tc.add_widget(t2)
         hdr.add_widget(tc); hdr.add_widget(Widget())
         self.status_lbl = Label(text='● READY', font_size=dp(11.5), color=C['cyan_dim'],
