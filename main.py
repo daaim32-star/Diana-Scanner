@@ -149,13 +149,24 @@ def panel(border_color_key, radius=8):
     ck = C[border_color_key]
     layout = BoxLayout(orientation='vertical', padding=dp(14), spacing=dp(8))
     with layout.canvas.before:
+        # Base fill
         Color(*C['panel'])
         layout._bg = RoundedRectangle(pos=layout.pos, size=layout.size, radius=[dp(radius)])
+        # Top gloss sheen
+        Color(1, 1, 1, 0.04)
+        layout._gl = RoundedRectangle(pos=layout.pos, size=(layout.width, layout.height * 0.5),
+                                      radius=[dp(radius), dp(radius), 0, 0])
+        # Top highlight line
+        Color(*ck[:3], 0.55)
+        layout._hl = Line(points=[layout.x + dp(radius), layout.top,
+                                   layout.right - dp(radius), layout.top], width=1.2)
+        # Border
         Color(*ck[:3], 0.22)
         layout._bd = Line(rounded_rectangle=(layout.x, layout.y, layout.width, layout.height, dp(radius)), width=1.2)
     def _upd(inst, _):
-        inst._bg.pos = inst.pos; inst._bg.size = inst.size
-        inst._bg.radius = [dp(radius)]
+        inst._bg.pos = inst.pos; inst._bg.size = inst.size; inst._bg.radius = [dp(radius)]
+        inst._gl.pos = inst.pos; inst._gl.size = (inst.width, inst.height * 0.5)
+        inst._hl.points = [inst.x + dp(radius), inst.top, inst.right - dp(radius), inst.top]
         inst._bd.rounded_rectangle = (inst.x, inst.y, inst.width, inst.height, dp(radius))
     layout.bind(pos=_upd, size=_upd)
     return layout
@@ -184,13 +195,25 @@ def btn(text, color_key, cb=None, height=dp(34), radius=6):
     b = Button(text=text, size_hint_y=None, height=height,
                background_color=(0,0,0,0), color=ck, font_size=dp(10.5), bold=True)
     with b.canvas.before:
+        # Base fill
         Color(*ck[:3], 0.18)
         b._bg = RoundedRectangle(pos=b.pos, size=b.size, radius=[dp(radius)])
-        Color(*ck[:3], 0.65)
+        # Gloss — top half white sheen
+        Color(1, 1, 1, 0.07)
+        b._gl = RoundedRectangle(pos=(b.x, b.y + b.height * 0.48),
+                                  size=(b.width, b.height * 0.52),
+                                  radius=[dp(radius), dp(radius), 0, 0])
+        # Top edge highlight
+        Color(*ck[:3], 0.90)
+        b._hl = Line(points=[b.x + dp(radius), b.top, b.right - dp(radius), b.top], width=1.0)
+        # Border
+        Color(*ck[:3], 0.55)
         b._bd = Line(rounded_rectangle=(b.x, b.y, b.width, b.height, dp(radius)), width=1.1)
     def _upd(inst, _):
-        inst._bg.pos = inst.pos; inst._bg.size = inst.size
-        inst._bg.radius = [dp(radius)]
+        inst._bg.pos = inst.pos; inst._bg.size = inst.size; inst._bg.radius = [dp(radius)]
+        inst._gl.pos = (inst.x, inst.y + inst.height * 0.48)
+        inst._gl.size = (inst.width, inst.height * 0.52)
+        inst._hl.points = [inst.x + dp(radius), inst.top, inst.right - dp(radius), inst.top]
         inst._bd.rounded_rectangle = (inst.x, inst.y, inst.width, inst.height, dp(radius))
     b.bind(pos=_upd, size=_upd)
     if cb:
@@ -352,11 +375,22 @@ class DeviceItem(BoxLayout):
         with self.canvas.before:
             Color(*bg_c)
             self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(6)])
+            # Gloss sheen on top half
+            Color(1, 1, 1, 0.04)
+            self._gl = RoundedRectangle(pos=(self.x, self.y + self.height * 0.5),
+                                         size=(self.width, self.height * 0.5),
+                                         radius=[dp(6), dp(6), 0, 0])
+            # Top edge highlight
+            Color(*bd_c[:3], 0.70)
+            self._hl = Line(points=[self.x + dp(6), self.top, self.right - dp(6), self.top], width=1.0)
             Color(*bd_c)
             self._bd = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(6)), width=1.1)
 
     def _refresh_bg(self, *_):
         self._bg.pos = self.pos; self._bg.size = self.size; self._bg.radius = [dp(6)]
+        self._gl.pos = (self.x, self.y + self.height * 0.5)
+        self._gl.size = (self.width, self.height * 0.5)
+        self._hl.points = [self.x + dp(6), self.top, self.right - dp(6), self.top]
         self._bd.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(6))
 
     def _on_touch(self, inst, touch):
@@ -371,6 +405,12 @@ class GroupItem(BoxLayout):
         with self.canvas.before:
             Color(*C['purple_bg'])
             self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(6)])
+            Color(1, 1, 1, 0.04)
+            self._gl = RoundedRectangle(pos=(self.x, self.y + self.height * 0.5),
+                                         size=(self.width, self.height * 0.5),
+                                         radius=[dp(6), dp(6), 0, 0])
+            Color(*C['purple'][:3], 0.70)
+            self._hl = Line(points=[self.x + dp(6), self.top, self.right - dp(6), self.top], width=1.0)
             Color(*C['purple'][:3], 0.30)
             self._bd = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(6)), width=1)
         self.bind(pos=self._upd, size=self._upd)
@@ -389,6 +429,8 @@ class GroupItem(BoxLayout):
 
     def _upd(self, *_):
         self._bg.pos = self.pos; self._bg.size = self.size; self._bg.radius = [dp(6)]
+        self._gl.pos = (self.x, self.y + self.height * 0.5); self._gl.size = (self.width, self.height * 0.5)
+        self._hl.points = [self.x + dp(6), self.top, self.right - dp(6), self.top]
         self._bd.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(6))
 
 class DianaApp(App):
@@ -410,10 +452,16 @@ class DianaApp(App):
         with hdr.canvas.before:
             Color(0.040, 0.032, 0.090, 1)
             hdr._bg = Rectangle(pos=hdr.pos, size=hdr.size)
-            Color(*C['cyan'][:3], 0.18)
-            hdr._bd = Rectangle(pos=(0,0), size=(0, dp(1)))
+            # Gloss overlay on top half of header
+            Color(1, 1, 1, 0.04)
+            hdr._gl = Rectangle(pos=hdr.pos, size=(0, 0))
+            # Bottom separator
+            Color(*C['cyan'][:3], 0.25)
+            hdr._bd = Rectangle(pos=(0, 0), size=(0, dp(1)))
         def _hdr_upd(inst, _):
             inst._bg.pos = inst.pos; inst._bg.size = inst.size
+            inst._gl.pos = (inst.x, inst.y + inst.height * 0.5)
+            inst._gl.size = (inst.width, inst.height * 0.5)
             inst._bd.pos = (inst.x, inst.y); inst._bd.size = (inst.width, dp(1))
         hdr.bind(pos=_hdr_upd, size=_hdr_upd)
         tc = BoxLayout(orientation='vertical', size_hint_x=None, width=dp(210))
