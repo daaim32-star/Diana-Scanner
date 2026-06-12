@@ -7,6 +7,7 @@ Config.set('input', 'mouse', 'mouse,disable_multitouch')
 Config.set('graphics', 'show_cursor', '1')
 Config.set('graphics', 'minimum_width', '1024')
 Config.set('graphics', 'minimum_height', '600')
+Config.set('graphics', 'window_state', 'maximized')
 Config.set('kivy', 'text_antialiasing', '1')
 
 from kivy.app import App
